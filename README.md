@@ -52,7 +52,7 @@ python3 ida_zh_installer.py --install --path "/Applications/IDA Professional 9.4
 
 | 来源 | 贡献 |
 |------|------|
-| 52pojie [RedFree](https://www.52pojie.cn/) | 原创 dylib Hook 方案 + 翻译表 |
+| 52pojie [RedFree](https://www.52pojie.cn/thread-2091950-1-1.html) | 原创 dylib Hook 方案 + 翻译表 |
 | 52pojie [m ra cry](https://www.52pojie.cn/thread-2082966-1-3.html) | 初版一键安装 App（硬编码 9.2 路径） |
 | Justin Chan（本项目） | 通用化改造：去硬编码 → 自动扫描多版本、重写安装器 + AppleScript UI、适配 macOS 15 签名机制 |
 
