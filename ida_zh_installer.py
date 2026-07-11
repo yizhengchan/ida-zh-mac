@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """IDA Pro macOS 通用汉化安装器
-支持 Qt 6.x 的 IDA 9.x 系列，arm64 / x86_64 通用。
+支持 Qt 6.x 的 IDA 9.x 系列，arm64。
 """
 
 import os

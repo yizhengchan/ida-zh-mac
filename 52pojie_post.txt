@@ -1,0 +1,181 @@
+[font=微软雅黑][size=5][b][macOS] IDA Pro 9.x 通用汉化工具 —— 多版本自动检测，一键安装卸载，支持 macOS 15[/b][/size][/font]
+
+[hr]
+
+[font=微软雅黑][size=4][b]一、由来[/b][/size][/font]
+
+事情的起点是 [url=https://www.52pojie.cn/thread-2082369-1-1.html]@RedFree[/url] 的首发帖，他花了很大功夫研究 IDA macOS 版的 Qt 界面汉化：最初尝试重编译 Qt 6.8.2 + QTranslator，走不通之后转而写了一个 Hook Qt 控件 setter 的 dylib，用 insert_dylib 注入到 IDA 二进制里。方案非常巧妙，翻译表也很完整。后来他又适配了 9.3 版本：[url=https://www.52pojie.cn/thread-2091950-1-1.html]全平台补丁帖[/url]。
+
+之后 [url=https://www.52pojie.cn/thread-2082966-1-3.html]@m ra cry[/url] 把流程打包成了一个双击即用的 .app，省去了敲命令的麻烦。
+
+但两个问题一直没解决：
+
+[list=1]
+[*]m ra cry 的 App 硬编码了 IDA 9.2 路径，9.3/9.4 直接报错用不了
+[*]insert_dylib 方案在 macOS 15 上会触发代码签名检查 —— 系统直接 SIGKILL（[font=Courier New]CODESIGNING Invalid Page[/font]），无法启动
+[/list]
+
+于是我把整个方案做了一次通用化改造，解决了这两个问题，同时保持开源。
+
+[color=#2e6ab1]GitHub 仓库：[url]https://github.com/yizhengchan/ida-zh-mac[/url][/color]
+
+[hr]
+
+[font=微软雅黑][size=4][b]二、和之前版本的区别[/b][/size][/font]
+
+[table=90%]
+[tr][td][b]对比项[/b][/td][td][b]RedFree 原版[/b][/td][td][b]m ra cry 版[/b][/td][td][b]本版[/b][/td][/tr]
+[tr][td]注入方式[/td][td]insert_dylib 修改二进制[/td][td]insert_dylib（自动化）[/td][td]DYLD_INSERT_LIBRARIES（不修改二进制）[/td][/tr]
+[tr][td]macOS 15[/td][td]❌ SIGKILL[/td][td]❌ SIGKILL[/td][td]✅ 正常[/td][/tr]
+[tr][td]版本检测[/td][td]需手动指定[/td][td]仅 9.2[/td][td]自动扫描 /Applications 下所有 9.x[/td][/tr]
+[tr][td]多版本共存[/td][td]手动[/td][td]不支持[/td][td]支持（可同时汉化 9.2、9.4 等）[/td][/tr]
+[tr][td]安装方式[/td][td]命令行 3 步[/td][td]双击 .app[/td][td]双击 .app / 命令行均可[/td][/tr]
+[tr][td]卸载[/td][td]手动恢复[/td][td]一键[/td][td]一键，完全恢复原始状态[/td][/tr]
+[tr][td]开源[/td][td]否[/td][td]否[/td][td]是（MIT）[/td][/tr]
+[/table]
+
+[hr]
+
+[font=微软雅黑][size=4][b]三、功能特点[/b][/size][/font]
+
+[list=1]
+[*][b]自动检测多版本[/b]：扫描 /Applications 下的 IDA Professional*.app，列出所有版本及安装状态，支持多个版本同时汉化
+[*][b]DYLD_INSERT_LIBRARIES 注入[/b]：创建 bash wrapper 设置环境变量后调用原始二进制，不修改 Mach-O。卸载即恢复，零残留
+[*][b]macOS 15 签名兼容[/b]：绕过 insert_dylib 导致的代码签名失效问题，亲测 macOS 15.5 通过
+[*][b]双击 App + 命令行双模式[/b]：小白双击 .app 选版本即可，脚本党用 Python CLI
+[*][b]翻译表可扩充[/b]：3059+ 条 JSON 格式，欢迎 PR 补充 9.4 新增 UI 字符串
+[*][b]Qt 版本自动校验[/b]：安装前通过 otool -L 检测 Qt 主版本号，Qt 5.x 直接拦截避免装坏
+[/list]
+
+[hr]
+
+[font=微软雅黑][size=4][b]四、使用方法[/b][/size][/font]
+
+[b]方法一：双击 App[/b]
+
+[list=1]
+[*]从 GitHub Releases 下载 [font=Courier New]IDA汉化工具_v1.0.0.dmg[/font]
+[*]双击打开，自动显示已安装的 IDA 列表及当前状态
+[*]选择版本，点击"安装汉化"或"卸载汉化"
+[*]等待完成
+[/list]
+
+[b]方法二：命令行[/b]
+
+[code]
+# 扫描所有已安装的 IDA
+python3 ida_zh_installer.py --list
+
+# 交互式安装（终端选择版本）
+python3 ida_zh_installer.py --install
+
+# 指定路径安装/卸载
+python3 ida_zh_installer.py --install --path "/Applications/IDA Professional 9.4.app"
+python3 ida_zh_installer.py --uninstall --path "/Applications/IDA Professional 9.4.app"
+[/code]
+
+[b]注意事项：[/b]
+[list]
+[*]安装后首次启动 IDA 会稍慢几秒（系统验证 ad-hoc 签名），正常现象，之后恢复正常速度
+[*]如果双击 App 提示"已损坏"，终端执行：
+[code]sudo xattr -rd com.apple.quarantine /path/to/IDA汉化工具.app[/code]
+[*]建议安装前关闭 IDA
+[/list]
+
+[hr]
+
+[font=微软雅黑][size=4][b]五、技术原理简介[/b][/size][/font]
+
+[b]为什么不用 insert_dylib？[/b]
+
+insert_dylib 通过修改 Mach-O 的 Load Commands，插入一条 LC_LOAD_DYLIB 让 dyld 加载我们的 dylib。这在 macOS 14 及以下没问题，但 macOS 15 强化了代码签名检查 —— 修改后的二进制页面签名校验失败，内核直接发 SIGKILL（日志里能看到 [font=Courier New]CODESIGNING Invalid Page[/font]），无法绕过。
+
+[b]DYLD_INSERT_LIBRARIES 怎么做的？[/b]
+
+这是一个 macOS 原生支持的环境变量，dyld 在加载程序时会先加载该变量指定的 dylib。关键是 —— [b]它不修改目标二进制本身[/b]，所以代码签名完好无损。
+
+具体做法：把原始 [font=Courier New]ida[/font] 重命名为 [font=Courier New]ida_orig[/font]，在原位置放一个 bash wrapper：
+
+[code]
+#!/bin/bash
+APP_DIR="$(cd "$(dirname "$0")" && pwd)"
+export DYLD_INSERT_LIBRARIES="$APP_DIR/libIdaTranslateLib.dylib"
+exec "$APP_DIR/ida_orig" "$@"
+[/code]
+
+dylib 加载后 Hook Qt 控件的 setter 方法（QLabel::setText、QAction::setText 等共 12 种），对照 JSON 翻译表替换文本。卸载时把 [font=Courier New]ida_orig[/font] 改回来，删掉 dylib 和 JSON 即可。
+
+[b]为什么 9.2 ~ 9.4+ 通用？[/b]
+
+用 otool -L 对比发现，目前为止所有 IDA 9.x 版本都链接 Qt 6.8.2，ABI 完全一致。只要 Hex-Rays 不升级 Qt 大版本，这个 dylib 就能一直用。
+
+[code]
+# 查看你的 IDA 用的 Qt 版本
+otool -L "/Applications/IDA Professional 9.4.app/Contents/Frameworks/QtCore.framework/Versions/A/QtCore" | grep "current version"
+# 输出: current version 6.8.2
+[/code]
+
+[hr]
+
+[font=微软雅黑][size=4][b]六、兼容性[/b][/size][/font]
+
+[table=60%]
+[tr][td]IDA Pro 9.x（9.2 / 9.3 / 9.4）[/td][td][color=green]✅[/color][/td][/tr]
+[tr][td]IDA Pro 8.x 及更早（Qt 5.x）[/td][td][color=red]❌[/color][/td][/tr]
+[tr][td]Apple Silicon (arm64)[/td][td][color=green]✅[/color][/td][/tr]
+[tr][td]macOS 11 ~ 15[/td][td][color=green]✅[/color][/td][/tr]
+[tr][td]Windows / Linux[/td][td][color=red]❌[/color][/td][/tr]
+[/table]
+
+[hr]
+
+[font=微软雅黑][size=4][b]七、致谢[/b][/size][/font]
+
+本项目的核心 dylib 和翻译表来自两位坛友的工作，我做的只是通用化适配和 macOS 15 兼容：
+
+[table=90%]
+[tr][td][b]贡献者[/b][/td][td][b]工作[/b][/td][/tr]
+[tr][td][url=https://www.52pojie.cn/thread-2082369-1-1.html]@RedFree[/url][/td][td]原创整套 Qt Hook 方案：dylib 编写 + insert_dylib 注入 + 3059 条翻译表，从零到一打通 Mac 版 IDA 汉化[/td][/tr]
+[tr][td][url=https://www.52pojie.cn/thread-2082966-1-3.html]@m ra cry[/url][/td][td]首次将命令行流程封装为双击 .app，证明了一键安装是可行的[/td][/tr]
+[tr][td]Justin Chan（本贴）[/td][td]通用化改造：去硬编码改为自动扫描多版本、insert_dylib → DYLD_INSERT_LIBRARIES 以适配 macOS 15、重写 Python 安装器 + AppleScript 界面、开源发布[/td][/tr]
+[/table]
+
+[hr]
+
+[font=微软雅黑][size=4][b]八、补充翻译表[/b][/size][/font]
+
+当前翻译表基于 9.2，9.4 新增的部分 UI 字符串可能仍为英文。如果你发现了未翻译的文本，欢迎补充 [font=Courier New]assets/ida_translations.json[/font] 并提交 PR，或者直接在本帖回复贴出"英文原文 → 中文翻译"的对应关系，我会在下一版合并进去。
+
+格式：
+[code]
+{
+  "原英文文本": "对应中文翻译",
+  "File": "文件",
+  ...
+}
+[/code]
+
+[hr]
+
+[font=微软雅黑][size=4][b]九、下载[/b][/size][/font]
+
+[hide]
+最新版：[url]https://github.com/yizhengchan/ida-zh-mac/releases/latest[/url]
+
+直接下载（v1.0.0 DMG）：[url]https://github.com/yizhengchan/ida-zh-mac/releases/download/v1.0.0/IDA._v1.0.0.dmg[/url]
+[/hide]
+
+[hr]
+
+[font=微软雅黑][size=4][b]十、免责声明[/b][/size][/font]
+
+[list=1]
+[*]本工具仅供学习和研究用途，不得用于任何非法行为。不得用做商业用途。商业使用请购买官方正版。
+[*]使用本工具时，使用者应自行承担风险，开发者不对因使用者使用本工具而造成的任何损失负责。
+[*]若侵犯他人权益或违反相关法律法规，请停止使用并立即删除本工具，责任由使用者自行承担，开发者不承担任何责任。请在合法合规的前提下使用本工具。
+[*]本工具完全免费，从未也不应通过任何渠道进行收费分发。
+[/list]
+
+[hr]
+
+第一次在 52 发帖，如有格式或表述上的问题请多包涵。欢迎反馈 bug 和未翻译的字符串！

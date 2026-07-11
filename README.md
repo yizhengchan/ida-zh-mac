@@ -33,7 +33,6 @@ python3 ida_zh_installer.py --install --path "/Applications/IDA Professional 9.4
 | 9.x     | Qt 6.x  | ✅   |
 | 8.x     | Qt 5.x  | ❌   |
 | arm64 (Apple Silicon) | —  | ✅   |
-| x86_64 (Intel)        | —  | ✅   |
 | Windows / Linux       | —  | ❌   |
 
 ## 扩充翻译表
